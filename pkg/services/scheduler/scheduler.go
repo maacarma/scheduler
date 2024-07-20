@@ -7,7 +7,8 @@ import (
 )
 
 type Repo interface {
-	ListTasks(ctx context.Context) ([]*sqlgen.Task, error)
+	GetTasks(ctx context.Context) ([]*sqlgen.Task, error)
+	GetTasksByNamespace(ctx context.Context, namespace string) ([]*sqlgen.Task, error)
 }
 
 type Service interface {
@@ -24,5 +25,5 @@ func New(repo Repo) Service {
 }
 
 func (s *scheduler) GetAll(ctx context.Context) ([]*sqlgen.Task, error) {
-	return s.repo.ListTasks(ctx)
+	return s.repo.GetTasks(ctx)
 }

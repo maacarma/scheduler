@@ -3,21 +3,22 @@ package transport
 import (
 	"net/http"
 
+	svc "github.com/maacarma/scheduler/pkg/services/scheduler"
+	sqlgen "github.com/maacarma/scheduler/pkg/services/scheduler/store/postgres/sqlgen"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
-	"github.com/maacarma/scheduler/pkg/services/scheduler"
-	"github.com/maacarma/scheduler/pkg/services/scheduler/store/postgres/sqlgen"
 )
 
 func Activate(router *gin.Engine, pgConn *pgx.Conn) {
-	newHandler(router, scheduler.New(sqlgen.New(pgConn)))
+	newHandler(router, svc.New(sqlgen.New(pgConn)))
 }
 
 type handler struct {
-	service scheduler.Service
+	service svc.Service
 }
 
-func newHandler(router *gin.Engine, sc scheduler.Service) {
+func newHandler(router *gin.Engine, sc svc.Service) {
 	h := handler{
 		service: sc,
 	}

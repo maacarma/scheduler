@@ -5,7 +5,11 @@
 package sqlgen
 
 type Task struct {
-	ID         int64   `json:"id"`
-	Name       string  `json:"name"`
-	Desciption *string `json:"desciption"`
+	ID        int64  `json:"id"`
+	Url       string `json:"url"`
+	Method    string `json:"method"`
+	Namespace string `json:"namespace"`
+	Params    []byte `json:"params"`
+	Headers   []byte `json:"headers"`
+	Body      []byte `json:"body"`
 }

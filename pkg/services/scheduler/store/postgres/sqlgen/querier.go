@@ -9,7 +9,9 @@ import (
 )
 
 type Querier interface {
-	ListTasks(ctx context.Context) ([]*Task, error)
+	CreateTask(ctx context.Context, arg CreateTaskParams) (int64, error)
+	GetTasks(ctx context.Context) ([]*Task, error)
+	GetTasksByNamespace(ctx context.Context, namespace string) ([]*Task, error)
 }
 
 var _ Querier = (*Queries)(nil)

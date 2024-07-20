@@ -4,9 +4,10 @@ import (
 	"context"
 	"log"
 
-	"github.com/gin-gonic/gin"
-	"github.com/maacarma/scheduler/pkg/services/scheduler/store/postgres"
+	postgres "github.com/maacarma/scheduler/pkg/db/postgres"
 	scheduler "github.com/maacarma/scheduler/pkg/services/scheduler/transport"
+
+	"github.com/gin-gonic/gin"
 )
 
 func Start() {
