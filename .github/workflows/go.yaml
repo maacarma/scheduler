@@ -3,7 +3,7 @@ name: Golang CI
 on: push 
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
