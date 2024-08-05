@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	models "github.com/maacarma/scheduler/pkg/services/scheduler/models"
 	sqlgen "github.com/maacarma/scheduler/pkg/services/scheduler/store/postgres/sqlgen"
@@ -27,13 +26,14 @@ func New(pgConn *pgx.Conn) *Repository {
 }
 
 func convertToTaskModel(task *sqlgen.Task) (*models.Task, error) {
-	var t models.Task
-	err := json.Unmarshal([]byte(task.Params), &t.Params)
-	if err != nil {
-		return nil, err
+	t := models.Task{
+		ID:        task.ID,
+		Url:       task.Url,
+		Method:    task.Method,
+		Namespace: task.Namespace,
 	}
 
-	err = json.Unmarshal([]byte(task.Headers), &t.Headers)
+	err := json.Unmarshal([]byte(task.Headers), &t.Headers)
 	if err != nil {
 		return nil, err
 	}
@@ -44,6 +44,30 @@ func convertToTaskModel(task *sqlgen.Task) (*models.Task, error) {
 	}
 
 	return &t, nil
+}
+
+func convertToDBModel(task *models.TaskPayload) (*sqlgen.CreateTaskParams, error) {
+	var m sqlgen.CreateTaskParams
+
+	headersInBytes, err := json.Marshal(task.Headers)
+	if err != nil {
+		return nil, err
+	}
+
+	bodyInBytes, err := json.Marshal(task.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	m = sqlgen.CreateTaskParams{
+		Url:       task.Url,
+		Method:    task.Method,
+		Namespace: task.Namespace,
+		Headers:   headersInBytes,
+		Body:      bodyInBytes,
+	}
+
+	return &m, nil
 }
 
 func (r *Repository) GetTasks(ctx context.Context) ([]*models.Task, error) {
@@ -85,32 +109,11 @@ func (r *Repository) GetTasksByNamespace(ctx context.Context, namespace string) 
 }
 
 func (r *Repository) CreateTask(ctx context.Context, task *models.TaskPayload) (int64, error) {
-	paramsInBytes, err := json.Marshal(task.Headers)
+	m, err := convertToDBModel(task)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
-	headersInBytes, err := json.Marshal(task.Headers)
-	if err != nil {
-		return -1, err
-	}
-
-	bodyInBytes, err := json.Marshal(task.Body)
-	if err != nil {
-		return -1, err
-	}
-
-	m := sqlgen.CreateTaskParams{
-		Url:       task.Url,
-		Method:    task.Method,
-		Namespace: task.Namespace,
-		Params:    paramsInBytes,
-		Headers:   headersInBytes,
-		Body:      bodyInBytes,
-	}
-
-	fmt.Println("Executing task")
-
-	id, err := r.rawRepo.CreateTask(ctx, m)
+	id, err := r.rawRepo.CreateTask(ctx, *m)
 	return id, err
 }
