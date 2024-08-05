@@ -9,7 +9,6 @@ type Task struct {
 	Url       string `json:"url"`
 	Method    string `json:"method"`
 	Namespace string `json:"namespace"`
-	Params    []byte `json:"params"`
 	Headers   []byte `json:"headers"`
 	Body      []byte `json:"body"`
 }

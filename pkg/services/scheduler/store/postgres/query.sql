@@ -7,8 +7,8 @@ WHERE namespace = $1;
 
 -- name: CreateTask :one
 INSERT INTO tasks (
-  url, method, namespace, params, headers, body
+  url, method, namespace, headers, body
 ) VALUES (
-  $1, $2, $3, $4, $5, $6
+  $1, $2, $3, $4, $5
 )
 RETURNING id;

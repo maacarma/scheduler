@@ -11,9 +11,9 @@ import (
 
 const createTask = `-- name: CreateTask :one
 INSERT INTO tasks (
-  url, method, namespace, params, headers, body
+  url, method, namespace, headers, body
 ) VALUES (
-  $1, $2, $3, $4, $5, $6
+  $1, $2, $3, $4, $5
 )
 RETURNING id
 `
@@ -22,7 +22,6 @@ type CreateTaskParams struct {
 	Url       string `json:"url"`
 	Method    string `json:"method"`
 	Namespace string `json:"namespace"`
-	Params    []byte `json:"params"`
 	Headers   []byte `json:"headers"`
 	Body      []byte `json:"body"`
 }
@@ -32,7 +31,6 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (int64, 
 		arg.Url,
 		arg.Method,
 		arg.Namespace,
-		arg.Params,
 		arg.Headers,
 		arg.Body,
 	)
@@ -42,7 +40,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (int64, 
 }
 
 const getTasks = `-- name: GetTasks :many
-SELECT id, url, method, namespace, params, headers, body FROM tasks
+SELECT id, url, method, namespace, headers, body FROM tasks
 `
 
 func (q *Queries) GetTasks(ctx context.Context) ([]*Task, error) {
@@ -59,7 +57,6 @@ func (q *Queries) GetTasks(ctx context.Context) ([]*Task, error) {
 			&i.Url,
 			&i.Method,
 			&i.Namespace,
-			&i.Params,
 			&i.Headers,
 			&i.Body,
 		); err != nil {
@@ -74,7 +71,7 @@ func (q *Queries) GetTasks(ctx context.Context) ([]*Task, error) {
 }
 
 const getTasksByNamespace = `-- name: GetTasksByNamespace :many
-SELECT id, url, method, namespace, params, headers, body FROM tasks
+SELECT id, url, method, namespace, headers, body FROM tasks
 WHERE namespace = $1
 `
 
@@ -92,7 +89,6 @@ func (q *Queries) GetTasksByNamespace(ctx context.Context, namespace string) ([]
 			&i.Url,
 			&i.Method,
 			&i.Namespace,
-			&i.Params,
 			&i.Headers,
 			&i.Body,
 		); err != nil {
