@@ -2,12 +2,12 @@ version: "2"
 
 sql:
   - engine: "postgresql"
-    queries: "pkg/services/scheduler/store/postgres/query.sql"
-    schema: "pkg/services/scheduler/store/postgres/schema.sql"
+    queries: "pkg/services/tasks/store/postgres/sql/query.sql"
+    schema: "pkg/services/tasks/store/postgres/sql/schema.sql"
     gen:
       go:
         package: "sqlgen"
-        out: "pkg/services/scheduler/store/postgres/sqlgen"
+        out: "pkg/services/tasks/store/postgres/sqlgen"
         sql_package: "pgx/v5"
         emit_interface: true
         emit_empty_slices: true
