@@ -11,3 +11,10 @@ services:
       - ./docker:/var/lib/postgresql/data
     ports:
       - 5432:5432
+
+  mongo:
+    image: mongo:4.4.21
+    restart: always
+    network_mode: host
+    volumes:
+      - ./docker/mongo/db:/data/db
