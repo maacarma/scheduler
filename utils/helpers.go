@@ -12,3 +12,13 @@ func PrintStruct(v any) {
 	res, _ := json.MarshalIndent(v, "", "  ")
 	fmt.Println(string(res))
 }
+
+// Contains checks if a value is in the slice
+func Contains[T comparable](s []T, v T) bool {
+	for _, a := range s {
+		if a == v {
+			return true
+		}
+	}
+	return false
+}

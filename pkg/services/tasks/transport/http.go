@@ -69,6 +69,10 @@ func (h *handler) CreateTask(c *gin.Context) {
 		return
 	}
 
+	if err := task.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, err)
+		return
+	}
 	id, err := h.service.Create(c.Request.Context(), &task)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
