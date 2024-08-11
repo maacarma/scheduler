@@ -41,5 +41,8 @@ func (s *tasks) GetByNamespace(ctx context.Context, namespace string) ([]*models
 }
 
 func (s *tasks) Create(ctx context.Context, task *models.TaskPayload) (string, error) {
+	if task.Namespace == "" {
+		task.Namespace = "default"
+	}
 	return s.taskRepo.CreateOne(ctx, task)
 }
