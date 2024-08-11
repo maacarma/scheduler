@@ -2,31 +2,64 @@ package api
 
 import (
 	"context"
-	"log"
+	"net/http"
+	"time"
 
-	postgres "github.com/maacarma/scheduler/pkg/db/postgres"
-	scheduler "github.com/maacarma/scheduler/pkg/services/scheduler/transport"
+	db "github.com/maacarma/scheduler/pkg/db"
+	tasks "github.com/maacarma/scheduler/pkg/services/tasks/transport"
+	utils "github.com/maacarma/scheduler/utils"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
-func Start() {
+const (
+	closingErr = "unable to close the server"
+)
 
-	pgConn, err := postgres.Connect(context.Background())
+// Start starts the API server
+func Start(ctx context.Context, logger *zap.Logger, conf *utils.Config) error {
+
+	dbClients, err := db.Connect(ctx, conf)
 	if err != nil {
-		log.Fatal(err)
+		return err
+	}
+
+	r := gin.Default()
+	tasks.Activate(r, dbClients)
+
+	errch := make(chan error)
+	server := &http.Server{
+		Addr:    conf.Application.Port,
+		Handler: r,
 	}
 
 	defer func() {
-		if pgConn != nil {
-			pgConn.Close(context.Background())
+		logger.Warn("graceful shutting server and db connections")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if dbClients.Pg != nil {
+			dbClients.Pg.Close(shutdownCtx)
+		}
+		if dbClients.Mongo != nil {
+			dbClients.Mongo.Disconnect(shutdownCtx)
+		}
+		err := server.Shutdown(shutdownCtx)
+		if err != nil {
+			logger.Error(closingErr, zap.Error(err))
 		}
 	}()
 
-	r := gin.Default()
-	scheduler.Activate(r, pgConn)
+	go func() {
+		logger.Info("Starting server", zap.String("addr", server.Addr))
+		errch <- server.ListenAndServe()
+	}()
 
-	if err := r.Run(); err != nil {
-		log.Fatal(err)
+	select {
+	case err := <-errch:
+		return err
+	case <-ctx.Done():
+		return nil
 	}
 }
