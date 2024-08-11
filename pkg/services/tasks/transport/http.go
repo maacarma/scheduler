@@ -3,24 +3,23 @@ package transport
 import (
 	"net/http"
 
+	db "github.com/maacarma/scheduler/pkg/db"
 	svc "github.com/maacarma/scheduler/pkg/services/tasks"
 	models "github.com/maacarma/scheduler/pkg/services/tasks/models"
 	mongodb "github.com/maacarma/scheduler/pkg/services/tasks/store/mongodb"
 	postgres "github.com/maacarma/scheduler/pkg/services/tasks/store/postgres"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // Activate activates the router.
-func Activate(router *gin.Engine, pgConn *pgx.Conn, mongoClient *mongo.Client) {
+func Activate(router *gin.Engine, dbClients *db.Clients) {
 	var repo svc.Repo
 	switch {
-	case pgConn != nil:
-		repo = postgres.New(pgConn)
-	case mongoClient != nil:
-		repo = mongodb.New(mongoClient)
+	case dbClients.Pg != nil:
+		repo = postgres.New(dbClients.Pg)
+	case dbClients.Mongo != nil:
+		repo = mongodb.New(dbClients.Mongo)
 	}
 
 	newHandler(router, svc.New(repo))
