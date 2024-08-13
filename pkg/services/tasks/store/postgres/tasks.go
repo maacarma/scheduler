@@ -116,6 +116,9 @@ func convert(task *sqlgen.Task) (*models.Task, error) {
 	t.Url = task.Url
 	t.Method = task.Method
 	t.Namespace = task.Namespace
+	t.StartUnix = task.StartUnix
+	t.EndUnix = task.EndUnix
+	t.Interval = task.Interval
 
 	return &t, nil
 }

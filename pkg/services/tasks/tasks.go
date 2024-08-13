@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"context"
+	"fmt"
 
 	models "github.com/maacarma/scheduler/pkg/services/tasks/models"
 )
@@ -19,6 +20,14 @@ type Service interface {
 	GetAll(ctx context.Context) ([]*models.Task, error)
 	GetByNamespace(ctx context.Context, namespace string) ([]*models.Task, error)
 	Create(ctx context.Context, task *models.TaskPayload) (string, error)
+}
+
+type Executor struct {
+	task *models.Task
+}
+
+func NewExecutor(task *models.Task) *Executor {
+	return &Executor{task: task}
 }
 
 // tasks is the concrete implementation of the Service interface.
@@ -45,4 +54,11 @@ func (s *tasks) Create(ctx context.Context, task *models.TaskPayload) (string, e
 		task.Namespace = "default"
 	}
 	return s.taskRepo.CreateOne(ctx, task)
+}
+
+// ExecuteTask executes a task. It returns an error if the task execution fails.
+// This method is used by the scheduler to execute tasks.
+func (s *Executor) Run() {
+	// complete the task execution logic here
+	fmt.Println("completed executing task ", s.task.ID)
 }

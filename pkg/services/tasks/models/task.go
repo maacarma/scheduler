@@ -27,6 +27,9 @@ type Task struct {
 	Params    MapAny `json:"params" bson:"params"`
 	Headers   MapAny `json:"headers" bson:"headers"`
 	Body      MapAny `json:"body" bson:"body"`
+	StartUnix int64  `json:"start_unix" bson:"start_unix"`
+	EndUnix   int64  `json:"end_unix" bson:"end_unix"`
+	Interval  string `json:"interval" bson:"interval"`
 }
 
 // TaskPayload is the api payload schema for creating a task.
@@ -37,6 +40,9 @@ type TaskPayload struct {
 	Params    MapAny `json:"params" bson:"params"`
 	Headers   MapAny `json:"headers" bson:"headers"`
 	Body      MapAny `json:"body" bson:"body"`
+	StartUnix int64  `json:"start_unix" bson:"start_unix"`
+	EndUnix   int64  `json:"end_unix" bson:"end_unix"`
+	Interval  string `json:"interval" bson:"interval"`
 }
 
 func (t *TaskPayload) Validate() *errors.Validation {
