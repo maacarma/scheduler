@@ -60,5 +60,5 @@ func (s *tasks) Create(ctx context.Context, task *models.TaskPayload) (string, e
 // This method is used by the scheduler to execute tasks.
 func (s *Executor) Run() {
 	// complete the task execution logic here
-	fmt.Println("completed executing task ", s.task.ID)
+	fmt.Println("dry run: executing task ", s.task.ID)
 }
