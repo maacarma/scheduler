@@ -1,6 +1,8 @@
 package task
 
 import (
+	"time"
+
 	errors "github.com/maacarma/scheduler/pkg/errors"
 	utils "github.com/maacarma/scheduler/utils"
 )
@@ -33,6 +35,8 @@ type Task struct {
 }
 
 // TaskPayload is the api payload schema for creating a task.
+// Methods accepted are those defined in methods variable array.
+// Interval is a string accepted by time.ParseDuration (http://golang.org/pkg/time/#ParseDuration).
 type TaskPayload struct {
 	Url       string `json:"url" bson:"url"`
 	Method    string `json:"method" bson:"method"`
@@ -45,12 +49,20 @@ type TaskPayload struct {
 	Interval  string `json:"interval" bson:"interval"`
 }
 
+// Validate validates the task payload.
+// checks if the task payload has all the required fields.
+// checks if the task payload has any invalid fields. Ex: http method, interval.
 func (t *TaskPayload) Validate() *errors.Validation {
 	if t.Url == "" {
 		return errors.InvalidPayload("url", errors.RequiredFieldMsg)
 	}
 	if !utils.Contains(methods, t.Method) {
-		return errors.InvalidPayload("method", "method is invalid")
+		return errors.InvalidPayload("method", errors.InvalidFieldMsg)
 	}
+	_, err := time.ParseDuration(t.Interval)
+	if err != nil {
+		return errors.InvalidPayload("interval", errors.InvalidFieldMsg, err.Error())
+	}
+
 	return nil
 }

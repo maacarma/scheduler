@@ -87,6 +87,9 @@ func (r *repo) CreateOne(ctx context.Context, task *models.TaskPayload) (string,
 		Params:    paramsInBytes,
 		Headers:   headersInBytes,
 		Body:      bodyInBytes,
+		StartUnix: task.StartUnix,
+		EndUnix:   task.EndUnix,
+		Interval:  task.Interval,
 	}
 
 	id, err := r.querier.CreateTask(ctx, m)

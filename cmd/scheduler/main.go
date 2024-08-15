@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/maacarma/scheduler/pkg/api"
+	"github.com/maacarma/scheduler/pkg/schedule"
 	"github.com/maacarma/scheduler/utils"
 	"go.uber.org/zap"
 )
@@ -27,6 +28,12 @@ func main() {
 		syscall.SIGTERM,
 	)
 	defer stop()
+
+	scheduler, err := schedule.New(config, logger)
+	if err != nil {
+		logger.Fatal("Cannot create scheduler", zap.Error(err))
+	}
+	scheduler.Start(ctx)
 
 	if err := api.Start(ctx, logger, config); err != nil {
 		logger.Fatal("Cannot start api server", zap.Error(err))

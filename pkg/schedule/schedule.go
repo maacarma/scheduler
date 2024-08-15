@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	scheduleErr          = "unable to schedule tasks"
+	scheduleErr          = "unable to schedule tasks due to %v"
 	scheduleSuccess      = "successfully scheduled all tasks"
 	scheduledTask        = "successfully scheduled task with id: %s"
 	duplicateTask        = "task with id: %s already scheduled"
@@ -66,38 +66,33 @@ func New(conf *utils.Config, logger *zap.Logger) (*Scheduler, error) {
 	}, nil
 }
 
-func (s *Scheduler) Tasks(ctx context.Context, logger *zap.Logger, conf *utils.Config) error {
-	dbClients, err := db.Connect(ctx, conf)
+// Start starts the scheduler.
+// It schedules all the tasks from the database.
+func (s *Scheduler) Start(ctx context.Context) error {
+	tasks, err := s.repo.GetAll(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf(scheduleErr, err)
 	}
-
-	var repo svc.Repo
-	switch {
-	case dbClients.Pg != nil:
-		repo = postgres.New(dbClients.Pg)
-	case dbClients.Mongo != nil:
-		repo = mongodb.New(dbClients.Mongo)
-	}
-
-	tasks, err := repo.GetAll(ctx)
 	for _, t := range tasks {
 		if err := s.NewTask(t); err != nil {
 			return err
 		}
 	}
 
+	s.cron.Start()
 	s.logger.Info(scheduleSuccess)
 	return nil
 }
 
+// NewTask adds a new task to the scheduler.
 func (s *Scheduler) NewTask(t *models.Task) error {
 	if _, exists := s.tasks[t.ID]; exists {
 		return fmt.Errorf(duplicateTask, t.ID)
 	}
 
 	executor := svc.NewExecutor(t)
-	entryID, err := s.cron.AddJob(t.Interval, executor)
+	updatedInterval := utils.ConvertToCronInterval(t.Interval)
+	entryID, err := s.cron.AddJob(updatedInterval, executor)
 	if err != nil {
 		return fmt.Errorf(unableToScheduleTask, t.ID, err)
 	}
@@ -107,6 +102,7 @@ func (s *Scheduler) NewTask(t *models.Task) error {
 	return nil
 }
 
+// DiscardTask removes a task from the scheduler.
 func (s *Scheduler) DiscardTask(taskID string) error {
 	if entryID, exists := s.tasks[taskID]; exists {
 		s.cron.Remove(entryID)
@@ -115,5 +111,5 @@ func (s *Scheduler) DiscardTask(taskID string) error {
 		return nil
 	}
 
-	return fmt.Errorf("task with id: %s not found", taskID)
+	return fmt.Errorf(noTaskFound, taskID)
 }
