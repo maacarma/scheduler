@@ -99,7 +99,6 @@ func (r *repo) CreateOne(ctx context.Context, task *models.TaskPayload) (string,
 // convert converts a sqlgen task to a native task model.
 func convert(task *sqlgen.Task) (*models.Task, error) {
 	var t models.Task
-	fmt.Println("task", string(task.Params))
 	err := json.Unmarshal(task.Params, &t.Params)
 	if err != nil {
 		return nil, err

@@ -17,13 +17,15 @@ import (
 )
 
 const (
-	scheduleErr          = "unable to schedule tasks due to %v"
-	scheduleSuccess      = "successfully scheduled all tasks"
-	scheduledTask        = "successfully scheduled task with id: %s"
-	duplicateTask        = "task with id: %s already scheduled"
-	deletedTask          = "task with id: %s deleted"
-	noTaskFound          = "no task found with id: %s"
-	unableToScheduleTask = "unable to schedule task with id: %s due to %v"
+	scheduleErr                = "unable to schedule tasks due to %v"
+	scheduleSuccess            = "successfully scheduled all tasks"
+	scheduledTask              = "successfully scheduled task with id: %s"
+	duplicateTask              = "task with id: %s already scheduled"
+	schedullingAnInactiveTask  = "task with id: %s is inactive"
+	deletedTask                = "task with id: %s deleted"
+	noTaskFound                = "no task found with id: %s"
+	noActiveTaskFoundToDiscard = "no active task found with id: %s to discard"
+	unableToScheduleTask       = "unable to schedule task with id: %s due to %v"
 )
 
 type repo interface {
@@ -33,6 +35,7 @@ type repo interface {
 type tasksMap map[string]cron.EntryID
 
 type Scheduler struct {
+	ctx    context.Context
 	repo   repo
 	cron   *cron.Cron
 	tasks  tasksMap
@@ -40,7 +43,8 @@ type Scheduler struct {
 	logger *zap.Logger
 }
 
-func New(conf *utils.Config, logger *zap.Logger) (*Scheduler, error) {
+// New creates a new scheduler instance.
+func New(ctx context.Context, conf *utils.Config, logger *zap.Logger) (*Scheduler, error) {
 	dbClients, err := db.Connect(context.Background(), conf)
 	if err != nil {
 		return nil, err
@@ -58,6 +62,7 @@ func New(conf *utils.Config, logger *zap.Logger) (*Scheduler, error) {
 	tasks := make(tasksMap)
 
 	return &Scheduler{
+		ctx:    ctx,
 		repo:   repo,
 		cron:   cron,
 		tasks:  tasks,
@@ -67,14 +72,20 @@ func New(conf *utils.Config, logger *zap.Logger) (*Scheduler, error) {
 }
 
 // Start starts the scheduler.
-// It schedules all the tasks from the database.
-func (s *Scheduler) Start(ctx context.Context) error {
-	tasks, err := s.repo.GetAll(ctx)
+// It schedules all the active tasks read from the database.
+func (s *Scheduler) Start() error {
+	tasks, err := s.repo.GetAll(s.ctx)
 	if err != nil {
 		return fmt.Errorf(scheduleErr, err)
 	}
+
 	for _, t := range tasks {
-		if err := s.NewTask(t); err != nil {
+		if utils.CurrentUTCUnix() < t.StartUnix {
+			go s.scheduleTaskWithDelay(utils.UTCUnixTimeDiff(t.StartUnix, false), t)
+			continue
+		}
+
+		if err := s.ScheduleTask(t); err != nil {
 			return err
 		}
 	}
@@ -84,8 +95,15 @@ func (s *Scheduler) Start(ctx context.Context) error {
 	return nil
 }
 
-// NewTask adds a new task to the scheduler.
-func (s *Scheduler) NewTask(t *models.Task) error {
+// ScheduleTask adds a new task to the scheduler.
+// It returns an error if the task is not active or if the task is already scheduled.
+// and also triggers a goroutine to discard the task after the end time.
+func (s *Scheduler) ScheduleTask(t *models.Task) error {
+	if !t.IsActive() {
+		s.logger.Warn(fmt.Sprintf(schedullingAnInactiveTask, t.ID))
+		return nil
+	}
+
 	if _, exists := s.tasks[t.ID]; exists {
 		return fmt.Errorf(duplicateTask, t.ID)
 	}
@@ -97,19 +115,57 @@ func (s *Scheduler) NewTask(t *models.Task) error {
 		return fmt.Errorf(unableToScheduleTask, t.ID, err)
 	}
 
+	go s.discardTaskWithDelay(utils.UTCUnixTimeDiff(t.EndUnix, false), t.ID)
 	s.logger.Info(fmt.Sprintf(scheduledTask, t.ID))
 	s.tasks[t.ID] = entryID
+
 	return nil
 }
 
+// scheduleTaskWithDelay schedules the task after the duration.
+func (s *Scheduler) scheduleTaskWithDelay(duration time.Duration, t *models.Task) {
+	ticker := time.NewTicker(duration)
+
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-ticker.C:
+			err := s.ScheduleTask(t)
+			if err != nil {
+				s.logger.Error(fmt.Sprintf(unableToScheduleTask, t.ID, err))
+			}
+			return
+		}
+	}
+}
+
 // DiscardTask removes a task from the scheduler.
-func (s *Scheduler) DiscardTask(taskID string) error {
+// if the task is not found in scheduler, it logs a message.
+func (s *Scheduler) DiscardTask(taskID string) {
 	if entryID, exists := s.tasks[taskID]; exists {
 		s.cron.Remove(entryID)
 		delete(s.tasks, taskID)
 		s.logger.Info(fmt.Sprintf(deletedTask, taskID))
-		return nil
+		return
 	}
 
-	return fmt.Errorf(noTaskFound, taskID)
+	s.logger.Warn(fmt.Sprintf(noActiveTaskFoundToDiscard, taskID))
+}
+
+// discardAfterEnd discards the task after the duration.
+func (s *Scheduler) discardTaskWithDelay(duration time.Duration, taskID string) {
+	ticker := time.NewTicker(duration)
+
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-ticker.C:
+			s.DiscardTask(taskID)
+			return
+		}
+	}
 }

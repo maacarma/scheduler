@@ -66,3 +66,13 @@ func (t *TaskPayload) Validate() *errors.Validation {
 
 	return nil
 }
+
+// IsActive checks if the task is active.
+// A task is active if the current time is between the start and end time.
+func (t *Task) IsActive() bool {
+	if utils.CurrentUTCUnix() < t.StartUnix || utils.CurrentUTCUnix() > t.EndUnix {
+		return false
+	}
+
+	return true
+}
