@@ -15,4 +15,5 @@ type Task struct {
 	StartUnix int64  `json:"start_unix"`
 	EndUnix   int64  `json:"end_unix"`
 	Interval  string `json:"interval"`
+	Paused    bool   `json:"paused"`
 }

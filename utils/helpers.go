@@ -36,8 +36,8 @@ func CurrentUTCUnix() int64 {
 }
 
 // UTCUnixTimeDiff returns the difference between the given time and the current UTC unix time.
-// If elapsed is true, current time - given time.
-// If elapsed is false, given time - current time.
+// If elapsed is true,  (current time - given time).
+// If elapsed is false, (given time - current time).
 func UTCUnixTimeDiff(a int64, elapsed bool) time.Duration {
 	curTime := CurrentUTCUnix()
 	if elapsed {

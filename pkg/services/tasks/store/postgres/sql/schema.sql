@@ -8,5 +8,6 @@ CREATE TABLE IF NOT EXISTS tasks (
   body            json,
   start_unix      bigint   NOT NULL CHECK (start_unix > 0),
   end_unix        bigint   NOT NULL CHECK (end_unix >= 0),
-  interval        text     NOT NULL
+  interval        text     NOT NULL,
+  paused          boolean  NOT NULL DEFAULT FALSE
 );

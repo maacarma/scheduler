@@ -13,7 +13,7 @@ import (
 )
 
 // Activate activates the router.
-func Activate(router *gin.Engine, dbClients *db.Clients) {
+func Activate(router *gin.Engine, dbClients *db.Clients, scheduler svc.Scheduler) {
 	var repo svc.Repo
 	switch {
 	case dbClients.Pg != nil:
@@ -22,7 +22,7 @@ func Activate(router *gin.Engine, dbClients *db.Clients) {
 		repo = mongodb.New(dbClients.Mongo)
 	}
 
-	newHandler(router, svc.New(repo))
+	newHandler(router, svc.New(repo, scheduler))
 }
 
 // handler is the concrete implementation of the tasks http methods.
@@ -58,6 +58,7 @@ func (h *handler) GetAllByNamespace(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, tasks)
 }
 
@@ -73,9 +74,10 @@ func (h *handler) CreateTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
-	id, err := h.service.Create(c.Request.Context(), &task)
+
+	id, statusCode, err := h.service.Create(c.Request.Context(), &task)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(statusCode, gin.H{"error": err.Error()})
 		return
 	}
 

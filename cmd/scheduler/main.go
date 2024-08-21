@@ -31,14 +31,14 @@ func main() {
 
 	scheduler, err := schedule.New(ctx, config, logger)
 	if err != nil {
-		logger.Fatal("cannot create scheduler", zap.Error(err))
+		logger.Fatal("unable to create scheduler", zap.Error(err))
 	}
 	err = scheduler.Start()
 	if err != nil {
-		logger.Fatal("cannot start scheduler", zap.Error(err))
+		logger.Fatal("unable to start scheduler", zap.Error(err))
 	}
 
-	if err := api.Start(ctx, logger, config); err != nil {
+	if err := api.Start(ctx, scheduler, logger, config); err != nil {
 		logger.Fatal("Cannot start api server", zap.Error(err))
 	}
 }

@@ -11,9 +11,9 @@ import (
 
 const createTask = `-- name: CreateTask :one
 INSERT INTO tasks (
-  url, method, namespace, params, headers, body, start_unix, end_unix, interval
+  url, method, namespace, params, headers, body, start_unix, end_unix, interval, paused
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 )
 RETURNING _id
 `
@@ -28,6 +28,7 @@ type CreateTaskParams struct {
 	StartUnix int64  `json:"start_unix"`
 	EndUnix   int64  `json:"end_unix"`
 	Interval  string `json:"interval"`
+	Paused    bool   `json:"paused"`
 }
 
 func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (int64, error) {
@@ -41,6 +42,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (int64, 
 		arg.StartUnix,
 		arg.EndUnix,
 		arg.Interval,
+		arg.Paused,
 	)
 	var _id int64
 	err := row.Scan(&_id)
@@ -48,7 +50,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (int64, 
 }
 
 const getTasks = `-- name: GetTasks :many
-SELECT _id, url, method, namespace, params, headers, body, start_unix, end_unix, interval FROM tasks
+SELECT _id, url, method, namespace, params, headers, body, start_unix, end_unix, interval, paused FROM tasks
 `
 
 func (q *Queries) GetTasks(ctx context.Context) ([]*Task, error) {
@@ -71,6 +73,7 @@ func (q *Queries) GetTasks(ctx context.Context) ([]*Task, error) {
 			&i.StartUnix,
 			&i.EndUnix,
 			&i.Interval,
+			&i.Paused,
 		); err != nil {
 			return nil, err
 		}
@@ -83,7 +86,7 @@ func (q *Queries) GetTasks(ctx context.Context) ([]*Task, error) {
 }
 
 const getTasksByNamespace = `-- name: GetTasksByNamespace :many
-SELECT _id, url, method, namespace, params, headers, body, start_unix, end_unix, interval FROM tasks
+SELECT _id, url, method, namespace, params, headers, body, start_unix, end_unix, interval, paused FROM tasks
 WHERE namespace = $1
 `
 
@@ -107,6 +110,7 @@ func (q *Queries) GetTasksByNamespace(ctx context.Context, namespace string) ([]
 			&i.StartUnix,
 			&i.EndUnix,
 			&i.Interval,
+			&i.Paused,
 		); err != nil {
 			return nil, err
 		}

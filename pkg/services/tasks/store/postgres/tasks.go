@@ -90,6 +90,7 @@ func (r *repo) CreateOne(ctx context.Context, task *models.TaskPayload) (string,
 		StartUnix: task.StartUnix,
 		EndUnix:   task.EndUnix,
 		Interval:  task.Interval,
+		Paused:    task.Paused,
 	}
 
 	id, err := r.querier.CreateTask(ctx, m)
@@ -121,6 +122,7 @@ func convert(task *sqlgen.Task) (*models.Task, error) {
 	t.StartUnix = task.StartUnix
 	t.EndUnix = task.EndUnix
 	t.Interval = task.Interval
+	t.Paused = task.Paused
 
 	return &t, nil
 }

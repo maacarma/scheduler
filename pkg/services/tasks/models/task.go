@@ -32,6 +32,7 @@ type Task struct {
 	StartUnix int64  `json:"start_unix" bson:"start_unix"`
 	EndUnix   int64  `json:"end_unix" bson:"end_unix"`
 	Interval  string `json:"interval" bson:"interval"`
+	Paused    bool   `json:"paused" bson:"paused"`
 }
 
 // TaskPayload is the api payload schema for creating a task.
@@ -47,6 +48,7 @@ type TaskPayload struct {
 	StartUnix int64  `json:"start_unix" bson:"start_unix"`
 	EndUnix   int64  `json:"end_unix" bson:"end_unix"`
 	Interval  string `json:"interval" bson:"interval"`
+	Paused    bool   `json:"paused" bson:"paused"`
 }
 
 // Validate validates the task payload.
@@ -65,6 +67,22 @@ func (t *TaskPayload) Validate() *errors.Validation {
 	}
 
 	return nil
+}
+
+func (t *TaskPayload) ConvertToTask(id string) Task {
+	return Task{
+		ID:        id,
+		Url:       t.Url,
+		Method:    t.Method,
+		Namespace: t.Namespace,
+		Params:    t.Params,
+		Headers:   t.Headers,
+		Body:      t.Body,
+		StartUnix: t.StartUnix,
+		EndUnix:   t.EndUnix,
+		Interval:  t.Interval,
+		Paused:    t.Paused,
+	}
 }
 
 // IsActive checks if the task is active.

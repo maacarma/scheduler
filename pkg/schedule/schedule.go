@@ -80,12 +80,8 @@ func (s *Scheduler) Start() error {
 	}
 
 	for _, t := range tasks {
-		if utils.CurrentUTCUnix() < t.StartUnix {
-			go s.scheduleTaskWithDelay(utils.UTCUnixTimeDiff(t.StartUnix, false), t)
-			continue
-		}
-
-		if err := s.ScheduleTask(t); err != nil {
+		err := s.ScheduleTask(t)
+		if err != nil {
 			return err
 		}
 	}
@@ -95,10 +91,24 @@ func (s *Scheduler) Start() error {
 	return nil
 }
 
-// ScheduleTask adds a new task to the scheduler.
+// ScheduleTask schedules the new task based on the start time.
+func (s *Scheduler) ScheduleTask(t *models.Task) error {
+	if utils.CurrentUTCUnix() < t.StartUnix {
+		go s.scheduleTaskWithDelay(utils.UTCUnixTimeDiff(t.StartUnix, false), t)
+		return nil
+	}
+
+	if err := s.ScheduleTaskNow(t); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+// ScheduleTaskNow adds a new task to the scheduler.
 // It returns an error if the task is not active or if the task is already scheduled.
 // and also triggers a goroutine to discard the task after the end time.
-func (s *Scheduler) ScheduleTask(t *models.Task) error {
+func (s *Scheduler) ScheduleTaskNow(t *models.Task) error {
 	if !t.IsActive() {
 		s.logger.Warn(fmt.Sprintf(schedullingAnInactiveTask, t.ID))
 		return nil
@@ -132,7 +142,7 @@ func (s *Scheduler) scheduleTaskWithDelay(duration time.Duration, t *models.Task
 		case <-s.ctx.Done():
 			return
 		case <-ticker.C:
-			err := s.ScheduleTask(t)
+			err := s.ScheduleTaskNow(t)
 			if err != nil {
 				s.logger.Error(fmt.Sprintf(unableToScheduleTask, t.ID, err))
 			}
@@ -141,9 +151,9 @@ func (s *Scheduler) scheduleTaskWithDelay(duration time.Duration, t *models.Task
 	}
 }
 
-// DiscardTask removes a task from the scheduler.
+// DiscardTaskNow removes a task from the scheduler.
 // if the task is not found in scheduler, it logs a message.
-func (s *Scheduler) DiscardTask(taskID string) {
+func (s *Scheduler) DiscardTaskNow(taskID string) {
 	if entryID, exists := s.tasks[taskID]; exists {
 		s.cron.Remove(entryID)
 		delete(s.tasks, taskID)
@@ -164,7 +174,7 @@ func (s *Scheduler) discardTaskWithDelay(duration time.Duration, taskID string) 
 		case <-s.ctx.Done():
 			return
 		case <-ticker.C:
-			s.DiscardTask(taskID)
+			s.DiscardTaskNow(taskID)
 			return
 		}
 	}
