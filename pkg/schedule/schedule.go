@@ -104,7 +104,6 @@ func (s *Scheduler) ScheduleTask(t *models.Task) error {
 	return nil
 }
 
-
 // ScheduleTaskNow adds a new task to the scheduler.
 // It returns an error if the task is not active or if the task is already scheduled.
 // and also triggers a goroutine to discard the task after the end time.

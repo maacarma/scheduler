@@ -6,7 +6,7 @@ import (
 	"time"
 
 	db "github.com/maacarma/scheduler/pkg/db"
-	"github.com/maacarma/scheduler/pkg/schedule"
+	svc "github.com/maacarma/scheduler/pkg/services/tasks"
 	tasks "github.com/maacarma/scheduler/pkg/services/tasks/transport"
 	utils "github.com/maacarma/scheduler/utils"
 
@@ -19,7 +19,7 @@ const (
 )
 
 // Start starts the API server
-func Start(ctx context.Context, scheduler *schedule.Scheduler, logger *zap.Logger, conf *utils.Config) error {
+func Start(ctx context.Context, scheduler svc.Scheduler, logger *zap.Logger, conf *utils.Config) error {
 
 	dbClients, err := db.Connect(ctx, conf)
 	if err != nil {
