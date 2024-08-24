@@ -80,10 +80,7 @@ func (s *Scheduler) Start() error {
 	}
 
 	for _, t := range tasks {
-		err := s.ScheduleTask(t)
-		if err != nil {
-			return err
-		}
+		s.ScheduleTask(t)
 	}
 
 	s.cron.Start()
@@ -91,23 +88,25 @@ func (s *Scheduler) Start() error {
 	return nil
 }
 
-// ScheduleTask schedules the new task based on the start time.
-func (s *Scheduler) ScheduleTask(t *models.Task) error {
-	if utils.CurrentUTCUnix() < t.StartUnix {
-		go s.scheduleTaskWithDelay(utils.UTCUnixTimeDiff(t.StartUnix, false), t)
-		return nil
+// ScheduleTask schedules the task based on the start time.
+func (s *Scheduler) ScheduleTask(t *models.Task) {
+	startUnix := utils.Unix(t.StartUnix)
+	if utils.CurrentUTCUnix() < startUnix {
+		s.logger.Info(fmt.Sprintf("Task with id: %s is scheduled to start in the future", t.ID))
+		go s.scheduleTaskWithDelay(startUnix.Diff(false), t)
+		return
 	}
 
-	if err := s.ScheduleTaskNow(t); err != nil {
-		return err
-	}
-	return nil
+	s.scheduleExistingTask(t)
 }
 
-// ScheduleTaskNow adds a new task to the scheduler.
+// ScheduleTaskNow adds the task to the scheduler.
+// and runs the task immediately because cron/v3 doesn't support immediate scheduling.
+//
 // It returns an error if the task is not active or if the task is already scheduled.
 // and also triggers a goroutine to discard the task after the end time.
 func (s *Scheduler) ScheduleTaskNow(t *models.Task) error {
+	endUnix := utils.Unix(t.EndUnix)
 	if !t.IsActive() {
 		s.logger.Warn(fmt.Sprintf(schedullingAnInactiveTask, t.ID))
 		return nil
@@ -119,12 +118,14 @@ func (s *Scheduler) ScheduleTaskNow(t *models.Task) error {
 
 	executor := svc.NewExecutor(t)
 	updatedInterval := utils.ConvertToCronInterval(t.Interval)
+	// runs the task in separate goroutine, this shouldn't be blocking
+	go executor.Run()
 	entryID, err := s.cron.AddJob(updatedInterval, executor)
 	if err != nil {
 		return fmt.Errorf(unableToScheduleTask, t.ID, err)
 	}
 
-	go s.discardTaskWithDelay(utils.UTCUnixTimeDiff(t.EndUnix, false), t.ID)
+	go s.discardTaskWithDelay(endUnix.Diff(false), t.ID)
 	s.logger.Info(fmt.Sprintf(scheduledTask, t.ID))
 	s.tasks[t.ID] = entryID
 
@@ -150,7 +151,32 @@ func (s *Scheduler) scheduleTaskWithDelay(duration time.Duration, t *models.Task
 	}
 }
 
-// DiscardTaskNow removes a task from the scheduler.
+// scheduleExistingTask schedules the existing task.
+// It calculates the next trigger time based on the current time and the start time.
+//
+// beware: panics if the task.StartUnix is greater than the current time.
+func (s *Scheduler) scheduleExistingTask(t *models.Task) {
+	startUnix := utils.Unix(t.StartUnix)
+	endUnix := utils.Unix(t.EndUnix)
+	curUnix := utils.CurrentUTCUnix()
+
+	// parsing the interval according to the cron @every format
+	interval, _ := time.ParseDuration(t.Interval)
+	updatedInterval := cron.Every(interval).Delay
+	intervalInSeconds := int64(updatedInterval.Seconds())
+
+	nextTrigger := time.Duration(intervalInSeconds-(int64(curUnix-startUnix)%intervalInSeconds)) * time.Second
+	endDuration := endUnix.Diff(false)
+	if nextTrigger > endDuration {
+		return
+	}
+
+	go s.scheduleTaskWithDelay(nextTrigger, t)
+}
+
+// DiscardTaskNow removes a task from the scheduler
+// and won't stops the task if it is running.
+//
 // if the task is not found in scheduler, it logs a message.
 func (s *Scheduler) DiscardTaskNow(taskID string) {
 	if entryID, exists := s.tasks[taskID]; exists {

@@ -37,7 +37,9 @@ type Task struct {
 
 // TaskPayload is the api payload schema for creating a task.
 // Methods accepted are those defined in methods variable array.
+//
 // Interval is a string accepted by time.ParseDuration (http://golang.org/pkg/time/#ParseDuration).
+// if any Interval less than second they will rounded to one second.
 type TaskPayload struct {
 	Url       string `json:"url" bson:"url"`
 	Method    string `json:"method" bson:"method"`
@@ -88,7 +90,10 @@ func (t *TaskPayload) ConvertToTask(id string) Task {
 // IsActive checks if the task is active.
 // A task is active if the current time is between the start and end time.
 func (t *Task) IsActive() bool {
-	if utils.CurrentUTCUnix() < t.StartUnix || utils.CurrentUTCUnix() > t.EndUnix {
+	startUnix := utils.Unix(t.StartUnix)
+	endUnix := utils.Unix(t.EndUnix)
+	curUnix := utils.CurrentUTCUnix()
+	if curUnix < startUnix || curUnix > endUnix {
 		return false
 	}
 
