@@ -87,6 +87,10 @@ func (r *repo) CreateOne(ctx context.Context, task *models.TaskPayload) (string,
 		Params:    paramsInBytes,
 		Headers:   headersInBytes,
 		Body:      bodyInBytes,
+		StartUnix: task.StartUnix,
+		EndUnix:   task.EndUnix,
+		Interval:  task.Interval,
+		Paused:    task.Paused,
 	}
 
 	id, err := r.querier.CreateTask(ctx, m)
@@ -96,7 +100,6 @@ func (r *repo) CreateOne(ctx context.Context, task *models.TaskPayload) (string,
 // convert converts a sqlgen task to a native task model.
 func convert(task *sqlgen.Task) (*models.Task, error) {
 	var t models.Task
-	fmt.Println("task", string(task.Params))
 	err := json.Unmarshal(task.Params, &t.Params)
 	if err != nil {
 		return nil, err
@@ -116,6 +119,10 @@ func convert(task *sqlgen.Task) (*models.Task, error) {
 	t.Url = task.Url
 	t.Method = task.Method
 	t.Namespace = task.Namespace
+	t.StartUnix = task.StartUnix
+	t.EndUnix = task.EndUnix
+	t.Interval = task.Interval
+	t.Paused = task.Paused
 
 	return &t, nil
 }

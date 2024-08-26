@@ -22,3 +22,9 @@ func Contains[T comparable](s []T, v T) bool {
 	}
 	return false
 }
+
+// ConvertToCronInterval converts a string interval to a cron interval
+// Ex: 1h -> @every 1g
+func ConvertToCronInterval(interval string) string {
+	return fmt.Sprintf("@every %s", interval)
+}

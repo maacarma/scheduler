@@ -2,7 +2,10 @@ module github.com/maacarma/scheduler
 
 go 1.22.3
 
-require github.com/jackc/pgx/v5 v5.6.0
+require (
+	github.com/jackc/pgx/v5 v5.6.0
+	github.com/robfig/cron/v3 v3.0.0
+)
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect

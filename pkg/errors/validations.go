@@ -3,17 +3,26 @@ package errors
 type Validation struct {
 	Key         string `json:"key"`
 	Description string `json:"description"`
+	Error       string `json:"error,omitempty"`
 }
 
-// defined validation messages
 const (
-	RequiredFieldMsg = "requires the field"
+	RequiredFieldMsg = "requires field"
+	InvalidFieldMsg  = "invalid field"
 )
 
-// ErrInvalidTaskPayload is the error returned when a task payload is invalid
-func InvalidPayload(key string, desc string) *Validation {
-	return &Validation{
-		Key:         key,
-		Description: desc,
+// ErrInvalidTaskPayload is the error returned when the payload is invalid
+// Expects args array of strings in following format
+// args[0]: key of the field
+// args[1]: description specified whats wrong with the field
+// args[2]: any additional error message
+func InvalidPayload(args ...string) *Validation {
+	switch len(args) {
+	case 2:
+		return &Validation{Key: args[0], Description: args[1]}
+	case 3:
+		return &Validation{Key: args[0], Description: args[1], Error: args[2]}
+	default:
+		return &Validation{}
 	}
 }
