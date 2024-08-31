@@ -45,7 +45,7 @@ type Scheduler struct {
 
 // New creates a new scheduler instance.
 func New(ctx context.Context, conf *utils.Config, logger *zap.Logger) (*Scheduler, error) {
-	dbClients, err := db.Connect(context.Background(), conf)
+	dbClients, err := db.Connect(ctx, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,6 @@ func (s *Scheduler) Start() error {
 func (s *Scheduler) ScheduleTask(t *models.Task) {
 	startUnix := utils.Unix(t.StartUnix)
 	if utils.CurrentUTCUnix() < startUnix {
-		s.logger.Info(fmt.Sprintf("Task with id: %s is scheduled to start in the future", t.ID))
 		go s.scheduleTaskWithDelay(startUnix.Diff(false), t)
 		return
 	}
