@@ -60,14 +60,23 @@ func (t *TaskPayload) Validate() *errors.Validation {
 	if t.Url == "" {
 		return errors.InvalidPayload("url", errors.RequiredFieldMsg)
 	}
+
 	if !utils.Contains(methods, t.Method) {
 		return errors.InvalidPayload("method", errors.InvalidFieldMsg)
 	}
+
 	_, err := time.ParseDuration(t.Interval)
 	if err != nil {
 		return errors.InvalidPayload("interval", errors.InvalidFieldMsg, err.Error())
 	}
 
+	if utils.Unix(t.StartUnix) < utils.CurrentUTCUnix() {
+		return errors.InvalidPayload("start_unix", errors.InvalidFieldMsg)
+	}
+
+	if utils.Unix(t.EndUnix) < utils.CurrentUTCUnix() || t.StartUnix > t.EndUnix {
+		return errors.InvalidPayload("end_unix", errors.InvalidFieldMsg)
+	}
 	return nil
 }
 
@@ -89,10 +98,10 @@ func (t *TaskPayload) ConvertToTask(id string) Task {
 
 // IsActive checks if the task is active.
 // A task is active if the current time is between the start and end time.
-func (t *Task) IsActive() bool {
+func (t *Task) IsActive(curUnix utils.Unix) bool {
 	startUnix := utils.Unix(t.StartUnix)
 	endUnix := utils.Unix(t.EndUnix)
-	curUnix := utils.CurrentUTCUnix()
+
 	if curUnix < startUnix || curUnix > endUnix {
 		return false
 	}

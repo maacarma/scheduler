@@ -90,9 +90,10 @@ func (s *Scheduler) Start() error {
 
 // ScheduleTask schedules the task based on the start time.
 func (s *Scheduler) ScheduleTask(t *models.Task) {
+	curUnix := utils.CurrentUTCUnix()
 	startUnix := utils.Unix(t.StartUnix)
 	if utils.CurrentUTCUnix() < startUnix {
-		go s.scheduleTaskWithDelay(startUnix.Diff(false), t)
+		go s.scheduleTaskWithDelay(startUnix.Sub(curUnix, false), t)
 		return
 	}
 
@@ -106,7 +107,9 @@ func (s *Scheduler) ScheduleTask(t *models.Task) {
 // and also triggers a goroutine to discard the task after the end time.
 func (s *Scheduler) ScheduleTaskNow(t *models.Task) error {
 	endUnix := utils.Unix(t.EndUnix)
-	if !t.IsActive() {
+	curUnix := utils.CurrentUTCUnix()
+
+	if !t.IsActive(curUnix) {
 		s.logger.Warn(fmt.Sprintf(schedullingAnInactiveTask, t.ID))
 		return nil
 	}
@@ -124,8 +127,7 @@ func (s *Scheduler) ScheduleTaskNow(t *models.Task) error {
 		return fmt.Errorf(unableToScheduleTask, t.ID, err)
 	}
 
-	go s.discardTaskWithDelay(endUnix.Diff(false), t.ID)
-	s.logger.Info(fmt.Sprintf(scheduledTask, t.ID))
+	go s.discardTaskWithDelay(endUnix.Sub(curUnix, false), t.ID)
 	s.tasks[t.ID] = entryID
 
 	return nil
@@ -145,6 +147,7 @@ func (s *Scheduler) scheduleTaskWithDelay(duration time.Duration, t *models.Task
 			if err != nil {
 				s.logger.Error(fmt.Sprintf(unableToScheduleTask, t.ID, err))
 			}
+			s.logger.Info(fmt.Sprintf(scheduledTask, t.ID))
 			return
 		}
 	}
@@ -165,7 +168,7 @@ func (s *Scheduler) scheduleExistingTask(t *models.Task) {
 	intervalInSeconds := int64(updatedInterval.Seconds())
 
 	nextTrigger := time.Duration(intervalInSeconds-(int64(curUnix-startUnix)%intervalInSeconds)) * time.Second
-	endDuration := endUnix.Diff(false)
+	endDuration := endUnix.Sub(curUnix, false)
 	if nextTrigger > endDuration {
 		return
 	}

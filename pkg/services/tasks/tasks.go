@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	models "github.com/maacarma/scheduler/pkg/services/tasks/models"
-	"github.com/maacarma/scheduler/utils"
 )
 
 // Repo is the interface that wraps the required repository methods.
@@ -65,18 +64,12 @@ func (s *svc) Create(ctx context.Context, task *models.TaskPayload) (string, int
 		task.Namespace = "default"
 	}
 
-	startUnix := utils.Unix(task.StartUnix)
-	if startUnix < utils.CurrentUTCUnix() {
-		return "", http.StatusBadRequest, fmt.Errorf("start time cannot be in the past")
-	}
-
 	id, err := s.repo.CreateOne(ctx, task)
 	if err != nil {
 		return "", http.StatusInternalServerError, err
 	}
 
 	tModel := task.ConvertToTask(id)
-
 	if !tModel.Paused {
 		s.scheduler.ScheduleTask(&tModel)
 	}
