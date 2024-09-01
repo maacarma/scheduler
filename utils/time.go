@@ -9,14 +9,13 @@ func CurrentUTCUnix() Unix {
 	return Unix(time.Now().UTC().Unix())
 }
 
-// Diff returns the difference between the given time and the current UTC unix time.
-// If elapsed is true,  (current time - given time).
-// If elapsed is false, (given time - current time).
-func (u Unix) Diff(elapsed bool) time.Duration {
-	curTime := CurrentUTCUnix()
-	if elapsed {
-		return time.Duration(curTime-u) * time.Second
+// Diff returns the difference between a and b in time duration
+// if (reverse = false) then (a - b)
+// if (reverse = true) the (b - a)
+func (a Unix) Sub(b Unix, reverse bool) time.Duration {
+	if reverse {
+		return time.Duration(b-a) * time.Second
 	}
 
-	return time.Duration(u-curTime) * time.Second
+	return time.Duration(a-b) * time.Second
 }

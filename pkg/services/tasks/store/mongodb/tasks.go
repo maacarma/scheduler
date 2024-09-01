@@ -4,6 +4,7 @@ import (
 	"context"
 
 	models "github.com/maacarma/scheduler/pkg/services/tasks/models"
+	utils "github.com/maacarma/scheduler/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -54,6 +55,35 @@ func (r *repo) GetByNamespace(ctx context.Context, namespace string) ([]*models.
 	return tasks, nil
 }
 
+// GetByID returns a task from the database with the given id.
+func (r *repo) GetByID(ctx context.Context, id string) (*models.Task, error) {
+	collection := r.client.Database(r.db).Collection(r.col)
+	task := &models.Task{}
+	err := collection.FindOne(ctx, bson.M{"_id": id}).Decode(task)
+	if err != nil {
+		return nil, err
+	}
+
+	return task, nil
+}
+
+// GetActiveTasks returns a list of active tasks
+func (r *repo) GetActiveTasks(ctx context.Context, curUnix utils.Unix) ([]*models.Task, error) {
+	collection := r.client.Database(r.db).Collection(r.col)
+	cursor, err := collection.Find(ctx, bson.M{"paused": false, "end_unix": bson.M{"$gte": curUnix}})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	tasks := []*models.Task{}
+	if err := cursor.All(ctx, &tasks); err != nil {
+		return nil, err
+	}
+
+	return tasks, nil
+}
+
 // CreateOne creates a new task and returns the id.
 func (r *repo) CreateOne(ctx context.Context, task *models.TaskPayload) (string, error) {
 	collection := r.client.Database(r.db).Collection(r.col)
@@ -63,4 +93,19 @@ func (r *repo) CreateOne(ctx context.Context, task *models.TaskPayload) (string,
 	}
 
 	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+}
+
+// UpdateStatus updates the status of a task.
+func (r *repo) UpdateStatus(ctx context.Context, id string, paused bool) error {
+	collection := r.client.Database(r.db).Collection(r.col)
+
+	_, err := collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{"paused": paused}})
+	return err
+}
+
+// Delete deletes a task
+func (r *repo) Delete(ctx context.Context, id string) error {
+	collection := r.client.Database(r.db).Collection(r.col)
+	_, err := collection.DeleteOne(ctx, bson.M{"_id": id})
+	return err
 }
