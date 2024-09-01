@@ -49,6 +49,77 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (int64, 
 	return _id, err
 }
 
+const deleteTask = `-- name: DeleteTask :exec
+DELETE FROM tasks
+WHERE _id = $1
+`
+
+func (q *Queries) DeleteTask(ctx context.Context, ID int64) error {
+	_, err := q.db.Exec(ctx, deleteTask, ID)
+	return err
+}
+
+const getActiveTasks = `-- name: GetActiveTasks :many
+SELECT _id, url, method, namespace, params, headers, body, start_unix, end_unix, interval, paused FROM tasks
+WHERE end_unix >= $1 AND NOT paused
+`
+
+func (q *Queries) GetActiveTasks(ctx context.Context, endUnix int64) ([]*Task, error) {
+	rows, err := q.db.Query(ctx, getActiveTasks, endUnix)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*Task{}
+	for rows.Next() {
+		var i Task
+		if err := rows.Scan(
+			&i.ID,
+			&i.Url,
+			&i.Method,
+			&i.Namespace,
+			&i.Params,
+			&i.Headers,
+			&i.Body,
+			&i.StartUnix,
+			&i.EndUnix,
+			&i.Interval,
+			&i.Paused,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTaskByID = `-- name: GetTaskByID :one
+SELECT _id, url, method, namespace, params, headers, body, start_unix, end_unix, interval, paused FROM tasks
+WHERE _id = $1
+`
+
+func (q *Queries) GetTaskByID(ctx context.Context, ID int64) (*Task, error) {
+	row := q.db.QueryRow(ctx, getTaskByID, ID)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.Url,
+		&i.Method,
+		&i.Namespace,
+		&i.Params,
+		&i.Headers,
+		&i.Body,
+		&i.StartUnix,
+		&i.EndUnix,
+		&i.Interval,
+		&i.Paused,
+	)
+	return &i, err
+}
+
 const getTasks = `-- name: GetTasks :many
 SELECT _id, url, method, namespace, params, headers, body, start_unix, end_unix, interval, paused FROM tasks
 `
@@ -120,4 +191,20 @@ func (q *Queries) GetTasksByNamespace(ctx context.Context, namespace string) ([]
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateTaskStatus = `-- name: UpdateTaskStatus :exec
+UPDATE tasks
+SET paused = $2
+WHERE _id = $1
+`
+
+type UpdateTaskStatusParams struct {
+	ID     int64 `json:"_id"`
+	Paused bool  `json:"paused"`
+}
+
+func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) error {
+	_, err := q.db.Exec(ctx, updateTaskStatus, arg.ID, arg.Paused)
+	return err
 }

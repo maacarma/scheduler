@@ -29,7 +29,7 @@ const (
 )
 
 type repo interface {
-	GetAll(ctx context.Context) ([]*models.Task, error)
+	GetActiveTasks(ctx context.Context, curUnix utils.Unix) ([]*models.Task, error)
 }
 
 type tasksMap map[string]cron.EntryID
@@ -50,7 +50,7 @@ func New(ctx context.Context, conf *utils.Config, logger *zap.Logger) (*Schedule
 		return nil, err
 	}
 
-	var repo svc.Repo
+	var repo repo
 	switch {
 	case dbClients.Pg != nil:
 		repo = postgres.New(dbClients.Pg)
@@ -74,7 +74,7 @@ func New(ctx context.Context, conf *utils.Config, logger *zap.Logger) (*Schedule
 // Start starts the scheduler.
 // It schedules all the active tasks read from the database.
 func (s *Scheduler) Start() error {
-	tasks, err := s.repo.GetAll(s.ctx)
+	tasks, err := s.repo.GetActiveTasks(s.ctx, utils.CurrentUTCUnix())
 	if err != nil {
 		return fmt.Errorf(scheduleErr, err)
 	}
@@ -101,24 +101,19 @@ func (s *Scheduler) ScheduleTask(t *models.Task) {
 }
 
 // ScheduleTaskNow adds the task to the scheduler.
-// and runs the task immediately because cron/v3 doesn't support immediate scheduling.
-//
-// It returns an error if the task is not active or if the task is already scheduled.
+// Runs the task immediately because cron/v3 doesn't support immediate scheduling.
 // and also triggers a goroutine to discard the task after the end time.
+
+// It returns an error if the task is already scheduled.
 func (s *Scheduler) ScheduleTaskNow(t *models.Task) error {
 	endUnix := utils.Unix(t.EndUnix)
 	curUnix := utils.CurrentUTCUnix()
-
-	if !t.IsActive(curUnix) {
-		s.logger.Warn(fmt.Sprintf(schedullingAnInactiveTask, t.ID))
-		return nil
-	}
 
 	if _, exists := s.tasks[t.ID]; exists {
 		return fmt.Errorf(duplicateTask, t.ID)
 	}
 
-	executor := svc.NewExecutor(t)
+	executor := svc.NewExecutor(t, s.logger)
 	updatedInterval := utils.ConvertToCronInterval(t.Interval)
 	// runs the task in separate goroutine, this shouldn't be blocking
 	go executor.Run()
@@ -127,13 +122,14 @@ func (s *Scheduler) ScheduleTaskNow(t *models.Task) error {
 		return fmt.Errorf(unableToScheduleTask, t.ID, err)
 	}
 
-	go s.discardTaskWithDelay(endUnix.Sub(curUnix, false), t.ID)
 	s.tasks[t.ID] = entryID
+	go s.discardTaskWithDelay(endUnix.Sub(curUnix, false), t.ID)
 
 	return nil
 }
 
 // scheduleTaskWithDelay schedules the task after the duration.
+// calls ScheduleTaskNow after the duration.
 func (s *Scheduler) scheduleTaskWithDelay(duration time.Duration, t *models.Task) {
 	ticker := time.NewTicker(duration)
 
@@ -188,7 +184,7 @@ func (s *Scheduler) DiscardTaskNow(taskID string) {
 		return
 	}
 
-	s.logger.Warn(fmt.Sprintf(noActiveTaskFoundToDiscard, taskID))
+	s.logger.Info(fmt.Sprintf(noActiveTaskFoundToDiscard, taskID))
 }
 
 // discardAfterEnd discards the task after the duration.

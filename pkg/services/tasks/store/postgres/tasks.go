@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	models "github.com/maacarma/scheduler/pkg/services/tasks/models"
 	sqlgen "github.com/maacarma/scheduler/pkg/services/tasks/store/postgres/sqlgen"
+	utils "github.com/maacarma/scheduler/utils"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -63,6 +65,41 @@ func (r *repo) GetByNamespace(ctx context.Context, namespace string) ([]*models.
 	return result, nil
 }
 
+// GetByID returns a task from the database with the given id.
+func (r *repo) GetByID(ctx context.Context, idStr string) (*models.Task, error) {
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	task, err := r.querier.GetTaskByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	t, err := convert(task)
+	if err != nil {
+		return nil, err
+	}
+
+	return t, nil
+}
+
+func (r *repo) GetActiveTasks(ctx context.Context, curUnix utils.Unix) ([]*models.Task, error) {
+	tasks, err := r.querier.GetActiveTasks(ctx, int64(curUnix))
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*models.Task, 0)
+	for _, task := range tasks {
+		t, err := convert(task)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, t)
+	}
+
+	return result, nil
+}
+
 // CreateOne creates a new task and returns the id.
 func (r *repo) CreateOne(ctx context.Context, task *models.TaskPayload) (string, error) {
 	paramsInBytes, err := json.Marshal(task.Params)
@@ -95,6 +132,27 @@ func (r *repo) CreateOne(ctx context.Context, task *models.TaskPayload) (string,
 
 	id, err := r.querier.CreateTask(ctx, m)
 	return fmt.Sprint(id), err
+}
+
+// UpdateStatus updates the paused status of a task.
+func (r *repo) UpdateStatus(ctx context.Context, idStr string, paused bool) error {
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	args := sqlgen.UpdateTaskStatusParams{ID: id, Paused: paused}
+	return r.querier.UpdateTaskStatus(ctx, args)
+}
+
+// DeleteTask deletes a task
+func (r *repo) Delete(ctx context.Context, idStr string) error {
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	return r.querier.DeleteTask(ctx, id)
 }
 
 // convert converts a sqlgen task to a native task model.

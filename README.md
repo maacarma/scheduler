@@ -26,3 +26,10 @@ This easy-to-use application lets you schedule HTTP tasks. It supports multiple 
 * **Real-time notifications:** Receive Slack or email alerts when tasks fail.
 * **Detailed logging:** Track historical records of API calls for analysis.
 * **Customized alerts:** Set up alerts based on specific conditions to meet your monitoring needs.
+
+
+## Usage 
+
+✨ sample curl attached [sample-curls.md](https://github.com/maacarma/scheduler/examples/sample-curls.md) ✨
+
+

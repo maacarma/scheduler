@@ -5,7 +5,7 @@ SELECT * FROM tasks;
 SELECT * FROM tasks
 WHERE namespace = $1;
 
--- name: GetUnExpiredActiveTasks :many
+-- name: GetActiveTasks :many
 SELECT * FROM tasks
 WHERE end_unix >= $1 AND NOT paused;
 
@@ -16,3 +16,16 @@ INSERT INTO tasks (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 )
 RETURNING _id;
+
+-- name: GetTaskByID :one
+SELECT * FROM tasks
+WHERE _id = $1;
+
+-- name: UpdateTaskStatus :exec
+UPDATE tasks
+SET paused = $2
+WHERE _id = $1;
+
+-- name: DeleteTask :exec
+DELETE FROM tasks
+WHERE _id = $1;

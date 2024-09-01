@@ -36,8 +36,10 @@ func newHandler(router *gin.Engine, sc svc.Service) {
 		service: sc,
 	}
 	router.GET("/tasks", h.GetAll)
-	router.GET("/tasks/:namespace", h.GetAllByNamespace)
 	router.POST("/tasks", h.CreateTask)
+	router.DELETE("/tasks/:id", h.DeleteTask)
+	router.PUT("/tasks/:id/status", h.ToggleStatus)
+	router.GET("/tasks/n/:namespace", h.GetAllByNamespace)
 }
 
 // GetAll returns all tasks
@@ -82,4 +84,27 @@ func (h *handler) CreateTask(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, map[string]string{"id": id})
+}
+
+// ToggleStatus toggle the status of a task
+func (h *handler) ToggleStatus(c *gin.Context) {
+	id := c.Param("id")
+	err := h.service.ToggleStatus(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, map[string]bool{"updated": true})
+}
+
+func (h *handler) DeleteTask(c *gin.Context) {
+	id := c.Param("id")
+	err := h.service.Delete(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, map[string]bool{"deleted": true})
 }
