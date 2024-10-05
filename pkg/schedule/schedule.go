@@ -72,9 +72,10 @@ func New(ctx context.Context, conf *utils.Config, logger *zap.Logger) (*Schedule
 }
 
 // Start starts the scheduler.
-// It schedules all the active tasks read from the database.
+// It schedules all the active tasks that read from the database.
 func (s *Scheduler) Start() error {
-	tasks, err := s.repo.GetActiveTasks(s.ctx, utils.CurrentUTCUnix())
+	curUnix := utils.CurrentUTCUnix()
+	tasks, err := s.repo.GetActiveTasks(s.ctx, curUnix)
 	if err != nil {
 		return fmt.Errorf(scheduleErr, err)
 	}
@@ -92,6 +93,7 @@ func (s *Scheduler) Start() error {
 func (s *Scheduler) ScheduleTask(t *models.Task) {
 	curUnix := utils.CurrentUTCUnix()
 	startUnix := utils.Unix(t.StartUnix)
+
 	if utils.CurrentUTCUnix() < startUnix {
 		go s.scheduleTaskWithDelay(startUnix.Sub(curUnix, false), t)
 		return
@@ -150,7 +152,7 @@ func (s *Scheduler) scheduleTaskWithDelay(duration time.Duration, t *models.Task
 }
 
 // scheduleExistingTask schedules the existing task.
-// It calculates the next trigger time based on the current time and the start time.
+// it calculates the next recur time and then adds to the cron.
 //
 // beware: panics if the task.StartUnix is greater than the current time.
 func (s *Scheduler) scheduleExistingTask(t *models.Task) {
@@ -158,18 +160,18 @@ func (s *Scheduler) scheduleExistingTask(t *models.Task) {
 	endUnix := utils.Unix(t.EndUnix)
 	curUnix := utils.CurrentUTCUnix()
 
-	// parsing the interval according to the cron @every format
+	// parsing the interval
 	interval, _ := time.ParseDuration(t.Interval)
 	updatedInterval := cron.Every(interval).Delay
 	intervalInSeconds := int64(updatedInterval.Seconds())
 
-	nextTrigger := time.Duration(intervalInSeconds-(int64(curUnix-startUnix)%intervalInSeconds)) * time.Second
-	endDuration := endUnix.Sub(curUnix, false)
-	if nextTrigger > endDuration {
+	nextTriggerIn := time.Duration(intervalInSeconds-(int64(curUnix-startUnix)%intervalInSeconds)) * time.Second
+	endDurationIn := endUnix.Sub(curUnix, false)
+	if nextTriggerIn > endDurationIn {
 		return
 	}
 
-	go s.scheduleTaskWithDelay(nextTrigger, t)
+	go s.scheduleTaskWithDelay(nextTriggerIn, t)
 }
 
 // DiscardTaskNow removes a task from the scheduler
