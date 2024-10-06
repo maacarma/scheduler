@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/maacarma/scheduler/config"
 	"github.com/maacarma/scheduler/pkg/api"
 	"github.com/maacarma/scheduler/pkg/schedule"
 	"github.com/maacarma/scheduler/utils"
@@ -14,7 +15,7 @@ import (
 )
 
 func main() {
-	config, err := utils.LoadConfig()
+	config, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}

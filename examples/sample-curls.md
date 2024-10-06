@@ -22,7 +22,7 @@ $ curl --location 'http://localhost:7187/tasks' \
     "method": "GET",
     "namespace": "default",
     "headers": {
-        "header1": "headerv1"
+        "header1": ["headerv1"]
     },
     "interval": "10s",
     "start_unix": 1725216780,

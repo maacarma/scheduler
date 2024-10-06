@@ -1,0 +1,10 @@
+application:
+  name: "scheduler"
+  port: ":7187"
+  env: "development"
+database:
+  db: "postgres"
+  mongodb:
+    url: "mongodb://localhost:27017"
+  postgres:
+    url: "postgres://scheduler:scheduler@localhost:5432/scheduler"

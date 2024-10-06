@@ -78,7 +78,7 @@ func (t *TaskPayload) Validate() *errors.Validation {
 	}
 
 	if utils.Unix(t.StartUnix) < utils.CurrentUTCUnix() {
-		return errors.InvalidPayload("start_unix", errors.InvalidFieldMsg)
+		return errors.InvalidPayload("start_unix", errors.InvalidFieldMsg, "start_unix should be greater than current time")
 	}
 
 	if utils.Unix(t.EndUnix) < utils.CurrentUTCUnix() || t.StartUnix > t.EndUnix {

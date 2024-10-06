@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/maacarma/scheduler/config"
 	"github.com/maacarma/scheduler/pkg/db/mongodb"
 	"github.com/maacarma/scheduler/pkg/db/postgres"
-	"github.com/maacarma/scheduler/utils"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -23,11 +23,11 @@ type Clients struct {
 }
 
 // Connect connects to the database and returns the connection.
-func Connect(ctx context.Context, conf *utils.Config) (*Clients, error) {
+func Connect(ctx context.Context, conf *config.Config) (*Clients, error) {
 
 	db := conf.Database.Db
-	pgConnStr := conf.Database.Postgres.ConnString
-	mongoConnStr := conf.Database.MongoDB.ConnString
+	pgConnStr := conf.Database.Postgres.Url
+	mongoConnStr := conf.Database.MongoDB.Url
 	c := Clients{}
 
 	switch db {
