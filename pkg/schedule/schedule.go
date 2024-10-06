@@ -3,6 +3,7 @@ package schedule
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	db "github.com/maacarma/scheduler/pkg/db"
@@ -29,21 +30,24 @@ const (
 )
 
 type repo interface {
+	// returns unexpired and unpaused tasks
 	GetActiveTasks(ctx context.Context, curUnix utils.Unix) ([]*models.Task, error)
 }
 
 type tasksMap map[string]cron.EntryID
 
 type Scheduler struct {
-	ctx    context.Context
-	repo   repo
-	cron   *cron.Cron
-	tasks  tasksMap
-	conf   *utils.Config
-	logger *zap.Logger
+	ctx     context.Context
+	repo    repo
+	cron    *cron.Cron
+	tasks   tasksMap
+	tasksMu sync.Mutex
+	conf    *utils.Config
+	logger  *zap.Logger
 }
 
 // New creates a new scheduler instance.
+// TODO: convert all the go-routines into effectiet using Select & For channel
 func New(ctx context.Context, conf *utils.Config, logger *zap.Logger) (*Scheduler, error) {
 	dbClients, err := db.Connect(ctx, conf)
 	if err != nil {
@@ -72,9 +76,10 @@ func New(ctx context.Context, conf *utils.Config, logger *zap.Logger) (*Schedule
 }
 
 // Start starts the scheduler.
-// It schedules all the active tasks read from the database.
+// It schedules all the active tasks that read from the database.
 func (s *Scheduler) Start() error {
-	tasks, err := s.repo.GetActiveTasks(s.ctx, utils.CurrentUTCUnix())
+	curUnix := utils.CurrentUTCUnix()
+	tasks, err := s.repo.GetActiveTasks(s.ctx, curUnix)
 	if err != nil {
 		return fmt.Errorf(scheduleErr, err)
 	}
@@ -92,15 +97,17 @@ func (s *Scheduler) Start() error {
 func (s *Scheduler) ScheduleTask(t *models.Task) {
 	curUnix := utils.CurrentUTCUnix()
 	startUnix := utils.Unix(t.StartUnix)
-	if utils.CurrentUTCUnix() < startUnix {
-		go s.scheduleTaskWithDelay(startUnix.Sub(curUnix, false), t)
-		return
-	}
 
-	s.scheduleExistingTask(t)
+	if curUnix == startUnix {
+		s.ScheduleTaskNow(t)
+	} else if curUnix < startUnix {
+		go s.scheduleTaskWithDelay(startUnix.Sub(curUnix, false), t)
+	} else {
+		s.scheduleExistingTask(t)
+	}
 }
 
-// ScheduleTaskNow adds the task to the scheduler.
+// ScheduleTaskNow adds the task to the cron.
 // Runs the task immediately because cron/v3 doesn't support immediate scheduling.
 // and also triggers a goroutine to discard the task after the end time.
 
@@ -109,6 +116,8 @@ func (s *Scheduler) ScheduleTaskNow(t *models.Task) error {
 	endUnix := utils.Unix(t.EndUnix)
 	curUnix := utils.CurrentUTCUnix()
 
+	s.tasksMu.Lock()
+	defer s.tasksMu.Unlock()
 	if _, exists := s.tasks[t.ID]; exists {
 		return fmt.Errorf(duplicateTask, t.ID)
 	}
@@ -123,7 +132,9 @@ func (s *Scheduler) ScheduleTaskNow(t *models.Task) error {
 	}
 
 	s.tasks[t.ID] = entryID
-	go s.discardTaskWithDelay(endUnix.Sub(curUnix, false), t.ID)
+	deleteBuffer := time.Second
+	deletesIn := endUnix.Sub(curUnix, false) + deleteBuffer
+	go s.discardTaskWithDelay(deletesIn, t.ID)
 
 	return nil
 }
@@ -150,7 +161,7 @@ func (s *Scheduler) scheduleTaskWithDelay(duration time.Duration, t *models.Task
 }
 
 // scheduleExistingTask schedules the existing task.
-// It calculates the next trigger time based on the current time and the start time.
+// it calculates the next recur time and then adds to the cron.
 //
 // beware: panics if the task.StartUnix is greater than the current time.
 func (s *Scheduler) scheduleExistingTask(t *models.Task) {
@@ -158,18 +169,18 @@ func (s *Scheduler) scheduleExistingTask(t *models.Task) {
 	endUnix := utils.Unix(t.EndUnix)
 	curUnix := utils.CurrentUTCUnix()
 
-	// parsing the interval according to the cron @every format
+	// parsing the interval
 	interval, _ := time.ParseDuration(t.Interval)
 	updatedInterval := cron.Every(interval).Delay
 	intervalInSeconds := int64(updatedInterval.Seconds())
 
-	nextTrigger := time.Duration(intervalInSeconds-(int64(curUnix-startUnix)%intervalInSeconds)) * time.Second
-	endDuration := endUnix.Sub(curUnix, false)
-	if nextTrigger > endDuration {
+	nextTriggerIn := time.Duration(intervalInSeconds-(int64(curUnix-startUnix)%intervalInSeconds)) * time.Second
+	endDurationIn := endUnix.Sub(curUnix, false)
+	if nextTriggerIn > endDurationIn {
 		return
 	}
 
-	go s.scheduleTaskWithDelay(nextTrigger, t)
+	go s.scheduleTaskWithDelay(nextTriggerIn, t)
 }
 
 // DiscardTaskNow removes a task from the scheduler
@@ -177,6 +188,8 @@ func (s *Scheduler) scheduleExistingTask(t *models.Task) {
 //
 // if the task is not found in scheduler, it logs a message.
 func (s *Scheduler) DiscardTaskNow(taskID string) {
+	s.tasksMu.Lock()
+	defer s.tasksMu.Unlock()
 	if entryID, exists := s.tasks[taskID]; exists {
 		s.cron.Remove(entryID)
 		delete(s.tasks, taskID)
