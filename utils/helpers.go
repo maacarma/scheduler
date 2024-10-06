@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 )
 
 func Add(a, b int) int { return a + b }
@@ -27,4 +28,15 @@ func Contains[T comparable](s []T, v T) bool {
 // Ex: 1h -> @every 1g
 func ConvertToCronInterval(interval string) string {
 	return fmt.Sprintf("@every %s", interval)
+}
+
+// AppendQueryParams appends query params to the given url
+func AppendQueryParams(u *url.URL, params map[string][]string) {
+	q := u.Query()
+	for k, v := range params {
+		for _, val := range v {
+			q.Add(k, val)
+		}
+	}
+	u.RawQuery = q.Encode()
 }
