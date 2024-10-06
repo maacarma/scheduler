@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"time"
 
+	config "github.com/maacarma/scheduler/config"
 	db "github.com/maacarma/scheduler/pkg/db"
 	svc "github.com/maacarma/scheduler/pkg/services/tasks"
 	tasks "github.com/maacarma/scheduler/pkg/services/tasks/transport"
-	utils "github.com/maacarma/scheduler/utils"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -19,7 +19,7 @@ const (
 )
 
 // Start starts the API server
-func Start(ctx context.Context, scheduler svc.Scheduler, logger *zap.Logger, conf *utils.Config) error {
+func Start(ctx context.Context, scheduler svc.Scheduler, logger *zap.Logger, conf *config.Config) error {
 
 	dbClients, err := db.Connect(ctx, conf)
 	if err != nil {

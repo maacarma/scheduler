@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maacarma/scheduler/config"
 	db "github.com/maacarma/scheduler/pkg/db"
 	svc "github.com/maacarma/scheduler/pkg/services/tasks"
 	models "github.com/maacarma/scheduler/pkg/services/tasks/models"
@@ -41,13 +42,13 @@ type Scheduler struct {
 	cron    *cron.Cron
 	tasks   tasksMap
 	tasksMu sync.Mutex
-	conf    *utils.Config
+	conf    *config.Config
 	logger  *zap.Logger
 }
 
 // New creates a new scheduler instance.
 // TODO: convert all the go-routines into effectiet using Select & For channel
-func New(ctx context.Context, conf *utils.Config, logger *zap.Logger) (*Scheduler, error) {
+func New(ctx context.Context, conf *config.Config, logger *zap.Logger) (*Scheduler, error) {
 	dbClients, err := db.Connect(ctx, conf)
 	if err != nil {
 		return nil, err
