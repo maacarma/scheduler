@@ -33,7 +33,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("unable to create scheduler", zap.Error(err))
 	}
-	err = scheduler.Start()
+	err = scheduler.Start(ctx)
 	if err != nil {
 		logger.Fatal("unable to start scheduler", zap.Error(err))
 	}
