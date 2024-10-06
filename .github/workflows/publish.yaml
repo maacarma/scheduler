@@ -24,5 +24,7 @@ jobs:
           with:
             context: .
             push: true
-            tags: gogree/scheduler:latest,gogree/scheduler:${GITHUB_SHA}
+            tags: |
+              gogree/scheduler:latest
+              gogree/scheduler:${{ github.sha }}
 
