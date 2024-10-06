@@ -2,7 +2,7 @@ name: Build Docker Image
 on:
   push:
     branches:
-      - test-ci
+      - main
 
 jobs:
     build:
@@ -18,12 +18,12 @@ jobs:
             username: ${{ secrets.DOCKERHUB_USERNAME }}
             password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-
         - name: Build and push
           uses: docker/build-push-action@v6
           with:
             context: .
             push: true
+            # need to use version tags instead of commit tags
             tags: |
               gogree/scheduler:latest
               gogree/scheduler:${{ github.sha }}
