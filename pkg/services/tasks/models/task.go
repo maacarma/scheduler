@@ -1,6 +1,8 @@
 package task
 
 import (
+	"net/http"
+	"net/url"
 	"time"
 
 	errors "github.com/maacarma/scheduler/pkg/errors"
@@ -22,17 +24,17 @@ var methods = []string{GET, POST, PUT, DELETE, PATCH}
 
 // Task represents a task entity.
 type Task struct {
-	ID        string `json:"_id" bson:"_id"`
-	Url       string `json:"url" bson:"url"`
-	Method    string `json:"method" bson:"method"`
-	Namespace string `json:"namespace" bson:"namespace"`
-	Params    MapAny `json:"params" bson:"params"`
-	Headers   MapAny `json:"headers" bson:"headers"`
-	Body      MapAny `json:"body" bson:"body"`
-	StartUnix int64  `json:"start_unix" bson:"start_unix"`
-	EndUnix   int64  `json:"end_unix" bson:"end_unix"`
-	Interval  string `json:"interval" bson:"interval"`
-	Paused    bool   `json:"paused" bson:"paused"`
+	ID        string              `json:"_id" bson:"_id"`
+	Url       string              `json:"url" bson:"url"`
+	Method    string              `json:"method" bson:"method"`
+	Namespace string              `json:"namespace" bson:"namespace"`
+	Params    map[string][]string `json:"params" bson:"params"`
+	Headers   http.Header         `json:"headers" bson:"headers"`
+	Body      MapAny              `json:"body" bson:"body"`
+	StartUnix int64               `json:"start_unix" bson:"start_unix"`
+	EndUnix   int64               `json:"end_unix" bson:"end_unix"`
+	Interval  string              `json:"interval" bson:"interval"`
+	Paused    bool                `json:"paused" bson:"paused"`
 }
 
 // TaskPayload is the api payload schema for creating a task.
@@ -41,16 +43,16 @@ type Task struct {
 // Interval is a string accepted by time.ParseDuration (http://golang.org/pkg/time/#ParseDuration).
 // if any Interval less than second they will rounded to one second.
 type TaskPayload struct {
-	Url       string `json:"url" bson:"url"`
-	Method    string `json:"method" bson:"method"`
-	Namespace string `json:"namespace" bson:"namespace"`
-	Params    MapAny `json:"params" bson:"params"`
-	Headers   MapAny `json:"headers" bson:"headers"`
-	Body      MapAny `json:"body" bson:"body"`
-	StartUnix int64  `json:"start_unix" bson:"start_unix"`
-	EndUnix   int64  `json:"end_unix" bson:"end_unix"`
-	Interval  string `json:"interval" bson:"interval"`
-	Paused    bool   `json:"paused" bson:"paused"`
+	Url       string              `json:"url" bson:"url"`
+	Method    string              `json:"method" bson:"method"`
+	Namespace string              `json:"namespace" bson:"namespace"`
+	Params    map[string][]string `json:"params" bson:"params"`
+	Headers   http.Header         `json:"headers" bson:"headers"`
+	Body      MapAny              `json:"body" bson:"body"`
+	StartUnix int64               `json:"start_unix" bson:"start_unix"`
+	EndUnix   int64               `json:"end_unix" bson:"end_unix"`
+	Interval  string              `json:"interval" bson:"interval"`
+	Paused    bool                `json:"paused" bson:"paused"`
 }
 
 // Validate validates the task payload.
@@ -68,6 +70,11 @@ func (t *TaskPayload) Validate() *errors.Validation {
 	_, err := time.ParseDuration(t.Interval)
 	if err != nil {
 		return errors.InvalidPayload("interval", errors.InvalidFieldMsg, err.Error())
+	}
+
+	_, err = url.Parse(t.Url)
+	if err != nil {
+		return errors.InvalidPayload("url", errors.InvalidFieldMsg, err.Error())
 	}
 
 	if utils.Unix(t.StartUnix) < utils.CurrentUTCUnix() {

@@ -1,10 +1,14 @@
 package tasks
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
+	"net/url"
 
 	models "github.com/maacarma/scheduler/pkg/services/tasks/models"
+	utils "github.com/maacarma/scheduler/utils"
 
 	"go.uber.org/zap"
 )
@@ -111,9 +115,34 @@ func (s *svc) Delete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }
 
-// ExecuteTask executes a task. It returns an error if the task execution fails.
-// This method is used by the scheduler to execute tasks.
+// ExecuteTask executes a task
+// This method is used by the cron to execute tasks.
 func (s *Executor) Run() {
-	// complete the task execution logic here
-	s.logger.Info("sample run", zap.String("task_id", s.task.ID))
+	s.logger.Info("executing: ", zap.String("task_id", s.task.ID))
+
+	url, err := url.Parse(s.task.Url)
+	if err != nil {
+		s.logger.Error("failed to parse url", zap.Error(err))
+		return
+	}
+	utils.AppendQueryParams(url, s.task.Params)
+
+	bodyBytes, err := json.Marshal(s.task.Body)
+	if err != nil {
+		s.logger.Error("failed to marshal body", zap.Error(err))
+		return
+	}
+
+	req, _ := http.NewRequest(s.task.Method, url.String(), bytes.NewBuffer(bodyBytes))
+	req.Header = s.task.Headers
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		s.logger.Error("failed to execute task", zap.Error(err))
+		return
+	}
+	defer resp.Body.Close()
+
+	s.logger.Info("task executed", zap.String("task_id", s.task.ID), zap.Int("status_code", resp.StatusCode))
 }

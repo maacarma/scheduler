@@ -37,7 +37,6 @@ type repo interface {
 type tasksMap map[string]cron.EntryID
 
 type Scheduler struct {
-	ctx     context.Context
 	repo    repo
 	cron    *cron.Cron
 	tasks   tasksMap
@@ -66,7 +65,6 @@ func New(ctx context.Context, conf *utils.Config, logger *zap.Logger) (*Schedule
 	tasks := make(tasksMap)
 
 	return &Scheduler{
-		ctx:    ctx,
 		repo:   repo,
 		cron:   cron,
 		tasks:  tasks,
@@ -77,9 +75,9 @@ func New(ctx context.Context, conf *utils.Config, logger *zap.Logger) (*Schedule
 
 // Start starts the scheduler.
 // It schedules all the active tasks that read from the database.
-func (s *Scheduler) Start() error {
+func (s *Scheduler) Start(ctx context.Context) error {
 	curUnix := utils.CurrentUTCUnix()
-	tasks, err := s.repo.GetActiveTasks(s.ctx, curUnix)
+	tasks, err := s.repo.GetActiveTasks(ctx, curUnix)
 	if err != nil {
 		return fmt.Errorf(scheduleErr, err)
 	}
@@ -147,8 +145,6 @@ func (s *Scheduler) scheduleTaskWithDelay(duration time.Duration, t *models.Task
 	defer ticker.Stop()
 	for {
 		select {
-		case <-s.ctx.Done():
-			return
 		case <-ticker.C:
 			err := s.ScheduleTaskNow(t)
 			if err != nil {
@@ -207,8 +203,6 @@ func (s *Scheduler) discardTaskWithDelay(duration time.Duration, taskID string) 
 	defer ticker.Stop()
 	for {
 		select {
-		case <-s.ctx.Done():
-			return
 		case <-ticker.C:
 			s.DiscardTaskNow(taskID)
 			return
