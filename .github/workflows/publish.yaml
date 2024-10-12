@@ -1,12 +1,13 @@
-name: Build Docker Image
+name: Publish
 on:
   push:
-    branches:
-      - main
+    tags: 
+      - 'v*'
 
 jobs:
-    build:
-      name: publish docker image
+    publish:
+      name: publish
+      environment: production
       runs-on: ubuntu-latest
       steps:
         - name: Checkout
@@ -23,8 +24,6 @@ jobs:
           with:
             context: .
             push: true
-            # need to use version tags instead of commit tags
-            tags: |
+            tags: | 
               gogree/scheduler:latest
-              gogree/scheduler:${{ github.sha }}
-
+              gogree/scheduler:${{ github.ref_name }}
