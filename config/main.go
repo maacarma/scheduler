@@ -66,5 +66,7 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("unable to decode config into struct, %v", err)
 	}
 
+	updateWithEnvs(&c)
+
 	return &c, nil
 }

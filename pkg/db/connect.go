@@ -11,10 +11,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// Error messages.
 const (
+	// database names in the config file
+	POSTGRES = "postgres"
+	MONGO    = "mongo"
+	// Error messages
 	connErr  = "unable to connect to %s : %v"
-	unkDbErr = "unknown database %s"
+	unkDbErr = "unknown database name: %s"
 )
 
 type Clients struct {
@@ -31,7 +34,7 @@ func Connect(ctx context.Context, conf *config.Config) (*Clients, error) {
 	c := Clients{}
 
 	switch db {
-	case "postgres":
+	case POSTGRES:
 		pgConn, err := postgres.Connect(ctx, pgConnStr)
 		if err != nil {
 			return nil, fmt.Errorf(connErr, db, err)
@@ -39,7 +42,7 @@ func Connect(ctx context.Context, conf *config.Config) (*Clients, error) {
 		c.Pg = pgConn
 		return &c, nil
 
-	case "mongodb":
+	case MONGO:
 		client, err := mongodb.Connect(ctx, mongoConnStr)
 		if err != nil {
 			return nil, fmt.Errorf(connErr, db, err)
