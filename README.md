@@ -38,7 +38,7 @@ This easy-to-use application lets you schedule recurring and non-recurring HTTP 
 * to specify the database connection string, you can pass the evn variable `MONGO_URL` or `POSTGRES_URL` to the docker container
 
 ### Deploying to Kubernetes
-* sample yaml attached [sample-k8s.yaml](https://github.com/maacarma/scheduler/examples/sample-k8s-deployment.yaml)
+* sample yaml attached [sample-k8s.yaml](https://github.com/maacarma/scheduler/blob/main/examples/sample-k8s-deployment.yaml)
 
 ### Usage
 * sample curl attached [sample-curls.md](https://github.com/maacarma/scheduler/examples/sample-curls.md)
