@@ -1,20 +1,34 @@
+version: '2'
 services:
-  postgres:
-    image: postgres
-    restart: always
-    network_mode: host
-    environment:
-      POSTGRES_USER: scheduler
-      POSTGRES_PASSWORD: scheduler
-      POSTGRES_DB: scheduler
-    volumes:
-      - ./docker:/var/lib/postgresql/data
-    ports:
-      - 5432:5432
+
+  # [Optional] Use this to run the scheduler with a postgres database instead of mongo
+  # [Optional] If you use this, update the DATABASE environment variable, dependencies as well specified in the service section
+  # postgres:
+  #   image: postgres
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: scheduler
+  #     POSTGRES_PASSWORD: scheduler
+  #     POSTGRES_DB: scheduler
+  #   volumes:
+  #     - ./.docker/postgres:/var/lib/postgresql/data
 
   mongo:
-    image: mongo:4.4.21
+    image: mongo
     restart: always
-    network_mode: host
     volumes:
-      - ./docker/mongo/db:/data/db
+      - ./.docker/mongo/db:/data/db
+    ports:
+      - 27017:27017
+  
+  service:
+    build: .
+    ports:
+      - 7187:7187
+    depends_on:
+      - mongo
+    environment:
+      - DATABASE=mongo
+      - MONGO_URL=mongodb://mongo:27017/
+      # DATABASE=postgres
+      # POSTGRES_URL=postgres://scheduler:scheduler@postgres:5432/scheduler

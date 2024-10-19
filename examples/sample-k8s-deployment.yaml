@@ -1,3 +1,4 @@
+# NOTE: use only single replica for the scheduler, scale vertically if needed
 apiVersion: v1
 kind: Pod
 metadata:
