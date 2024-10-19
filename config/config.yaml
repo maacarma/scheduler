@@ -3,7 +3,7 @@ application:
   port: ":7187"
   env: "development"
 database:
-  db: "postgres"
+  db: "mongo"
   mongodb:
     url: "mongodb://localhost:27017"
   postgres:

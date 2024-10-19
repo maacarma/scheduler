@@ -6,11 +6,9 @@
 This easy-to-use application lets you schedule recurring and non-recurring HTTP tasks. It supports multiple databases, making it adaptable to any architecture. Tasks can be scheduled using cron expressions or human-readable strings and can be stopped with ease.
 
 
-## 🚀 Installation
+## 🚀 Releases
 
 ✨ Version `v1.0.0` is available ✨
-
-`docker pull gogree/scheduler`
 
 ## 💡 Supported Features
 
@@ -32,14 +30,21 @@ This easy-to-use application lets you schedule recurring and non-recurring HTTP 
 * **Customized alerts:** Set up alerts based on specific conditions to meet your monitoring needs.
 
 
-## Running 
+## Getting Started
 
-* to specify the database, you can pass the evn variable `DATABASE` with the value `mongo` or `postgres` to the docker container
-* to specify the database connection string, you can pass the evn variable `MONGO_URL` or `POSTGRES_URL` to the docker container
+### Installation Method
+1. Install [Docker](https://docs.docker.com/get-docker/), if not installed.
+2. Clone the repository. 
+2. Change the current directory to the repository directory: `cd ./scheduler`.
+3. Build and run the Docker containers using the following command: 
+```shell
+docker-compose up -d
+```
+This starts the service on the port :7187
 
 ### Deploying to Kubernetes
-* sample yaml attached [sample-k8s.yaml](https://github.com/maacarma/scheduler/examples/sample-k8s-deployment.yaml.yaml)
+* sample yaml attached [sample-k8s.yaml](https://github.com/maacarma/scheduler/blob/main/examples/sample-k8s-deployment.yaml)
 
 ### Usage
-* sample curl attached [sample-curls.md](https://github.com/maacarma/scheduler/examples/sample-curls.md)
+* sample curl attached [sample-curls.md](https://github.com/maacarma/scheduler/blob/main/examples/sample-curls.md)
 
