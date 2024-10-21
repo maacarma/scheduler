@@ -10,6 +10,8 @@ This easy-to-use application lets you schedule recurring and non-recurring HTTP 
 
 ✨ Version `v1.0.0` is available ✨
 
+Avaiable on docker repository `docker pull gogree/scheduler`
+
 ## 💡 Supported Features
 
 ### Generical
