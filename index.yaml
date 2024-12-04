@@ -1,0 +1,13 @@
+apiVersion: v1
+entries:
+  scheduler-app:
+  - apiVersion: v2
+    created: "2024-12-05T00:22:16.252540801+05:30"
+    description: Helm chart for a maacarma/scheduler app which helps to perform scheduled
+      tasks
+    digest: d28f9d1e92585a49ac49a788fcf180b3cbd74f0f0ab673fc1da7cd81f9e7d1ce
+    name: scheduler-app
+    urls:
+    - https://maacarma.github.io/scheduler/scheduler-app-1.0.0.tgz
+    version: 1.0.0
+generated: "2024-12-05T00:22:16.251672932+05:30"
